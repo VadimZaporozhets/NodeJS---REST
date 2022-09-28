@@ -1,16 +1,29 @@
+const fs = require('fs');
 const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const path = require('path');
 const multer = require('multer');
+const helmet = require('helmet');
+const morgan = require('morgan');
 
 const feedRoutes = require('./routes/feed');
 const authRoutes = require('./routes/auth');
 
+require('dotenv').config();
+
 const MONGODB_URI =
-  'mongodb+srv://admin:85920868@cluster0.4ng6hf5.mongodb.net/messages?retryWrites=true&w=majority';
+  `mongodb+srv://${process.env.MONGO_USER}:${process.env.MONGO_PASSWORD}@cluster0.4ng6hf5.mongodb.net/${process.env.MONGO_DEFAULT_DATABASE}?retryWrites=true&w=majority`;
 
 const app = express();
+
+const accessLogStream = fs.createWriteStream(
+  path.join(__dirname, 'access.log'),
+  { flags: 'a' }
+);
+
+app.use(helmet());
+app.use(morgan('combined', { stream: accessLogStream }));
 
 const fileStorage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -69,7 +82,7 @@ mongoose
     useUnifiedTopology: true,
   })
   .then((result) => {
-    const server = app.listen(8080);
+    const server = app.listen(process.env.PORT || 8080);
     const io = require('./socket').init(server);
 
     io.on('connection', (socket) => {
